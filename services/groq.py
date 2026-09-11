@@ -12,7 +12,7 @@ client = OpenAI(
 )
 
 
-def call_grok(prompt):
+def call_groq(prompt):
     response = client.chat.completions.create(
         model="openai/gpt-oss-20b",
         messages=[

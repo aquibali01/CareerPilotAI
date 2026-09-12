@@ -1,0 +1,14 @@
+{
+  "Software Developer": {
+    "required_skills": ["Python", "Java", "Git", "SQL", "OOP", "APIs"]
+  },
+  "AI/ML Engineer": {
+    "required_skills": ["Python", "Machine Learning", "Git", "RAG", "LLM APIs", "Agentic AI", "Deployment"]
+  },
+  "Backend Developer": {
+    "required_skills": ["Python", "SQL", "APIs", "Git", "Databases", "Docker"]
+  },
+  "Data Analyst": {
+    "required_skills": ["Python", "SQL", "Excel", "Data Visualization", "Statistics"]
+  }
+}

@@ -1,14 +1,29 @@
 {
-  "Software Developer": {
-    "required_skills": ["Python", "Java", "Git", "SQL", "OOP", "APIs"]
+  "Full Stack Developer": {
+    "required_skills": ["Python", "JavaScript", "React", "Node.js", "SQL", "Git", "APIs", "HTML/CSS"]
+  },
+  "Software Engineer": {
+    "required_skills": ["Python", "Java", "Git", "SQL", "OOP", "APIs", "Data Structures"]
   },
   "AI/ML Engineer": {
-    "required_skills": ["Python", "Machine Learning", "Git", "RAG", "LLM APIs", "Agentic AI", "Deployment"]
+    "required_skills": ["Python", "Machine Learning", "Git", "RAG", "LLM APIs", "Agentic AI", "PyTorch", "Deployment"]
   },
   "Backend Developer": {
-    "required_skills": ["Python", "SQL", "APIs", "Git", "Databases", "Docker"]
+    "required_skills": ["Python", "SQL", "APIs", "Git", "Databases", "Docker", "Node.js"]
+  },
+  "Frontend Developer": {
+    "required_skills": ["JavaScript", "React", "HTML/CSS", "Git", "TypeScript", "UI/UX", "APIs"]
+  },
+  "Data Scientist": {
+    "required_skills": ["Python", "SQL", "Machine Learning", "Statistics", "Data Visualization", "Git"]
   },
   "Data Analyst": {
-    "required_skills": ["Python", "SQL", "Excel", "Data Visualization", "Statistics"]
+    "required_skills": ["Python", "SQL", "Excel", "Data Visualization", "Statistics", "Power BI"]
+  },
+  "DevOps / Cloud Engineer": {
+    "required_skills": ["Docker", "Linux", "AWS", "Git", "Python", "CI/CD", "APIs"]
+  },
+  "Financial / FinTech Engineer": {
+    "required_skills": ["Python", "Financial Modeling", "SQL", "Excel", "Git", "Statistics", "APIs"]
   }
 }

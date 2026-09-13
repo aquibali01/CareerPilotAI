@@ -22,9 +22,11 @@ from modules.career_advisor import (
 
 from modules.business_advisor import generate_business_ideas
 
-# Uncomment once Member 2's shared pipeline functions are ready:
-# from services.resume_parser import extract_cv_skills
-# from services.github import verify_skills_from_github
+import json
+from services.resume_parser import extract_text_from_pdf
+from services.github import fetch_github_user_data
+from services.grok import call_grok_json
+from prompts.prompts import CV_ANALYSIS_PROMPT, SKILL_VERIFICATION_PROMPT
 
 
 st.set_page_config(page_title="CareerPilot AI", page_icon="🚀", layout="wide")
@@ -501,34 +503,90 @@ with st.form("profile_form"):
     with col1:
         name = st.text_input("Name")
         education = st.text_input("Education (e.g. Computer Science)")
-        github_username = st.text_input("GitHub Username")
+        github_username = st.text_input("GitHub Username (optional but recommended)")
     with col2:
         interests = st.text_input("Interests (e.g. AI, Web Development)")
         goal = st.text_input("Career Goal (e.g. AI Engineer)")
         cv_file = st.file_uploader("Upload your CV (PDF)", type=["pdf"])
 
+    cv_text_input = st.text_area(
+        "Or paste your CV / Resume text here (optional fallback)",
+        height=100,
+        placeholder="Paste your CV text here if you don't have a PDF or if text extraction is disabled on your PDF..."
+    )
+
     submitted = st.form_submit_button("Analyze My Profile")
 
 # ---------------------------------------------------------------------
-# Step 2 — Run the pipeline once the form is submitted (UNCHANGED LOGIC)
+# Step 2 — Run the pipeline once the form is submitted
 # ---------------------------------------------------------------------
 if submitted:
-    if not cv_file or not github_username:
-        st.warning("Please upload a CV and enter a GitHub username to continue.")
+    cv_text = ""
+    if cv_file:
+        with st.spinner("Extracting text from your CV PDF..."):
+            cv_text = extract_text_from_pdf(cv_file)
+    
+    if not cv_text and cv_text_input.strip():
+        cv_text = cv_text_input.strip()
+
+    if not cv_text:
+        st.warning("Please upload a CV PDF or paste your CV text to continue.")
         st.stop()
 
-    with st.spinner("Analyzing your CV and GitHub projects..."):
-        verified_skills = {
-            "Python": "High",
-            "Java": "High",
-            "SQL": "Medium",
-            "AI": "Low",
-        }
+    with st.spinner("Analyzing CV skills and fetching GitHub repositories..."):
+        # 1. Analyze CV text using Grok
+        cv_prompt = CV_ANALYSIS_PROMPT.format(cv_text=cv_text)
+        cv_data = call_grok_json(cv_prompt)
+        claimed_skills = cv_data.get("skills", [])
 
-    st.success("Analysis complete!")
+        # 2. Fetch user's GitHub data if username provided
+        gh_user = github_username.strip() if github_username else ""
+        if gh_user:
+            github_data = fetch_github_user_data(gh_user)
+        else:
+            github_data = {"username": None, "repos": [], "detected_languages": []}
 
-    st.session_state["verified_skills"] = verified_skills
+    with st.spinner("Verifying skills against evidence..."):
+        # 3. Verify claimed skills against GitHub evidence
+        verify_prompt = SKILL_VERIFICATION_PROMPT.format(
+            cv_skills=json.dumps(claimed_skills),
+            github_data=json.dumps(github_data)
+        )
+        verification_result = call_grok_json(verify_prompt)
+
+        raw_verified_list = verification_result.get("verified_skills", [])
+        verified_skills_dict = {}
+
+        if isinstance(raw_verified_list, list):
+            for item in raw_verified_list:
+                if isinstance(item, dict) and "skill" in item:
+                    skill_name = item["skill"]
+                    confidence = str(item.get("confidence", "Medium")).title()
+                    if confidence not in ("High", "Medium", "Low"):
+                        confidence = "Medium"
+                    verified_skills_dict[skill_name] = confidence
+
+        # Fallback: Every claimed skill from CV is at least Medium (CV Verified)
+        if claimed_skills:
+            for s in claimed_skills:
+                if s not in verified_skills_dict or verified_skills_dict[s] == "Low":
+                    verified_skills_dict[s] = "Medium"
+
+        if not verified_skills_dict:
+            verified_skills_dict = {"Python": "High"}
+
+    st.success(f"Analysis complete! Extracted {len(verified_skills_dict)} skills from your profile.")
+
+    st.session_state["verified_skills"] = verified_skills_dict
+    st.session_state["verified_profile"] = verification_result if raw_verified_list else {
+        "verified_skills": [
+            {"skill": k, "confidence": v, "evidence": f"CV verified skill: {k}"}
+            for k, v in verified_skills_dict.items()
+        ]
+    }
     st.session_state["interests"] = interests
+    st.session_state["cv_data"] = cv_data
+    st.session_state["github_data"] = github_data
 
 # ---------------------------------------------------------------------
 # Step 3 — Show results in tabs (UNCHANGED LOGIC, redesigned presentation)
@@ -608,12 +666,14 @@ if "verified_skills" in st.session_state:
         st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
         if st.button("Generate Business Ideas"):
             with st.spinner("Thinking of business ideas..."):
-                business_profile = {
-                    "verified_skills": [
-                        {"skill": k, "confidence": v, "evidence": ""}
-                        for k, v in verified_skills.items()
-                    ]
-                }
+                business_profile = st.session_state.get("verified_profile")
+                if not business_profile:
+                    business_profile = {
+                        "verified_skills": [
+                            {"skill": k, "confidence": v, "evidence": ""}
+                            for k, v in verified_skills.items()
+                        ]
+                    }
                 result = generate_business_ideas(business_profile, budget, business_interest)
 
             if result.get("status") == "ok" and result.get("ideas"):

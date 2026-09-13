@@ -31,6 +31,55 @@ def load_career_requirements() -> dict:
         return json.load(f)
 
 
+def _get_skill_confidence(skill: str, verified_skills: dict) -> str | None:
+    """Find confidence for a skill with case-insensitive and partial/synonym matching."""
+    if skill in verified_skills:
+        return verified_skills[skill]
+
+    skill_lower = skill.strip().lower()
+    
+    # 1. Exact case-insensitive match
+    for k, v in verified_skills.items():
+        if k.strip().lower() == skill_lower:
+            return v
+            
+    # 2. Alias / synonym matching
+    aliases = {
+        "python": ["python", "python3", "py"],
+        "sql": ["sql", "mysql", "postgresql", "postgres", "sqlite", "tsql", "database", "databases"],
+        "git": ["git", "github", "version control"],
+        "apis": ["api", "apis", "rest api", "rest apis", "restful api", "fastapi", "flask"],
+        "machine learning": ["machine learning", "ml", "deep learning", "ai", "scikit-learn", "tensorflow", "pytorch"],
+        "data visualization": ["data visualization", "power bi", "tableau", "matplotlib", "seaborn", "plotly"],
+        "llm apis": ["llm apis", "llm api", "openai api", "groq api", "grok api", "langchain", "llm", "llms"],
+        "rag": ["rag", "retrieval augmented generation", "vector database", "chromadb", "pinecone", "faiss"],
+        "agentic ai": ["agentic ai", "ai agents", "langgraph", "crewai", "autogen"],
+        "deployment": ["deployment", "docker", "kubernetes", "aws", "gcp", "azure", "render", "heroku", "streamlit"],
+        "oop": ["oop", "object oriented programming", "object-oriented programming"],
+        "javascript": ["javascript", "js", "node.js", "express", "ts", "typescript"],
+        "react": ["react", "react.js", "reactjs", "next.js", "nextjs"],
+        "node.js": ["node", "node.js", "nodejs", "express", "backend"],
+        "html/css": ["html", "css", "html5", "css3", "sass", "scss", "tailwind", "web development"],
+        "excel": ["excel", "ms excel", "spreadsheets", "financial modeling"],
+        "statistics": ["statistics", "statistical analysis", "math", "data analysis", "probability"],
+        "financial modeling": ["financial modeling", "finance", "financial analysis", "valuation", "excel"],
+        "docker": ["docker", "dockerized", "containerization", "containers"],
+        "linux": ["linux", "ubuntu", "bash", "shell"],
+        "aws": ["aws", "amazon web services", "cloud"],
+        "databases": ["database", "databases", "sql", "nosql", "mongodb", "postgresql", "mysql"],
+        "power bi": ["power bi", "powerbi", "tableau", "data visualization"],
+    }
+    
+    target_aliases = aliases.get(skill_lower, [skill_lower])
+    for k, v in verified_skills.items():
+        k_lower = k.strip().lower()
+        for alias in target_aliases:
+            if alias in k_lower or k_lower in alias:
+                return v
+
+    return None
+
+
 # ---------------------------------------------------------------------
 # Step 11 — Deterministic scoring logic (NOT sent to Grok, kept reliable)
 # ---------------------------------------------------------------------
@@ -57,7 +106,7 @@ def compute_career_matches(verified_skills: dict) -> list:
         missing_skills = []
 
         for skill in required:
-            confidence = verified_skills.get(skill)
+            confidence = _get_skill_confidence(skill, verified_skills)
             weight = CONFIDENCE_WEIGHTS.get(confidence, 0.0)
             total_weight += weight
             if weight > 0:
@@ -109,7 +158,7 @@ def get_skill_gap(target_role: str, verified_skills: dict) -> dict:
     gap = {"have": [], "partial": [], "missing": []}
 
     for skill in required:
-        confidence = verified_skills.get(skill)
+        confidence = _get_skill_confidence(skill, verified_skills)
         if confidence == "High":
             gap["have"].append(skill)
         elif confidence in ("Medium", "Low"):

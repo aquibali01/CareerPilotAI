@@ -3,7 +3,7 @@ No markdown code fences (e.g. do not wrap in ```json), no explanations, no text 
 If a value is unknown, use null or an empty array [] — never omit a required key.
 Your entire response must be parseable by json.loads() with no modification."""
 
-CV_ANALYSIS_PROMPT = """Analyze the following resume text and extract key structured information.
+CV_ANALYSIS_PROMPT = """Analyze the following resume text and extract key structured information. Be thorough in capturing ALL technical, analytical, soft, and domain skills listed or demonstrated in experience and projects.
 
 Resume Text:
 {cv_text}
@@ -12,7 +12,7 @@ Return a JSON object with EXACTLY this structure:
 {{
   "candidate_name": "Full Name or null",
   "education": "Degree and Institution summary",
-  "skills": ["Skill1", "Skill2", "Skill3"],
+  "skills": ["Skill1", "Skill2", "Skill3", "Skill4"],
   "projects": [
     {{
       "title": "Project Name",
@@ -25,7 +25,7 @@ Return a JSON object with EXACTLY this structure:
 }}
 """
 
-SKILL_VERIFICATION_PROMPT = """You are an expert technical evaluator. Compare the user's claimed skills from their CV against their actual GitHub evidence.
+SKILL_VERIFICATION_PROMPT = """You are an expert technical evaluator for CareerPilot AI. Evaluate the user's skills using BOTH their CV claims AND their GitHub profile evidence.
 
 CV Claimed Skills:
 {cv_skills}
@@ -33,27 +33,30 @@ CV Claimed Skills:
 GitHub Profile Summary:
 {github_data}
 
-For each claimed skill, evaluate the actual GitHub evidence and assign a confidence rating:
-- High: Clear repository evidence, major language usage, or relevant project code/descriptions.
-- Medium: Secondary evidence, listed in topics/descriptions, or indirect project usage.
-- Low: No relevant repository, language, or project evidence found on GitHub.
+Confidence Rating Rules:
+- High: Clear repository evidence, primary programming language usage, active projects, or strong GitHub evidence.
+- Medium: Listed/claimed on the user's CV with projects/experience (even if no public GitHub repo exists), OR indirect/secondary evidence on GitHub.
+- Low: Neither supported by CV experience nor GitHub repositories, or explicitly contradicted.
 
-Return ONLY a JSON object formatted as follows:
+Evaluate all claimed skills from the CV as well as any prominent languages/technologies detected on GitHub.
+
+Return ONLY a valid JSON object formatted as follows:
 {{
   "verified_skills": [
     {{
       "skill": "Python",
       "confidence": "High",
-      "evidence": "Multiple repositories using Python as primary language."
+      "evidence": "Multiple repositories using Python as primary language on GitHub."
     }},
     {{
-      "skill": "Docker",
-      "confidence": "Low",
-      "evidence": "No Dockerfiles or Docker configuration found in public repositories."
+      "skill": "SQL",
+      "confidence": "Medium",
+      "evidence": "Claimed on CV with project experience; unverified on public GitHub."
     }}
   ]
 }}
 """
+
 BUSINESS_ADVISOR_PROMPT = """You are CareerPilot AI's Business Advisor.
 
 Your task is to identify realistic business opportunities that the user can
